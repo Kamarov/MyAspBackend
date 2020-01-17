@@ -1,0 +1,209 @@
+﻿@model MyASPBackend.Models.Registration
+
+@{
+    ViewBag.Title = "RegistrationPage";
+}
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script type="text/javascript">
+    //Usuwamy poprzednio zalogowanego usera
+    localStorage.removeItem("Nick");
+
+    //Deklarujemy stale, by zaprowadzic troche porzadku w javascripcie...
+
+    //Buttony
+    var ButtonRegister = "#registerbutton";
+
+    //Input fieldy
+    const InputFieldIDNick = "#Nick";
+    const InputFieldIDEmail = "#Email";
+    const InputFieldIDPassword = "#Password";
+
+    //Spany
+    const SpanIDNickStatus = "#nickstatus";
+    const SpanIDEmailStatus = "#emailstatus";
+    const SpanIDPasswordStatus = "#passwordstatus";
+
+    //Url
+    const UrlUserExists = "/Home/UserExists";
+    const UrlRegistrationSucces = "/Home/RegistrationSucces";
+
+    //To nam sie przyda przy przycisku rejestracji
+    var CanRegisterNow = false;
+    var EmailCorrect = false;
+    var NickCorrect = false;
+    var PasswordCorrect = false;
+
+
+    //Blokuje/odblokowuje buttona
+    function BlockRegisterButton(block) {
+        var button = $(ButtonRegister);
+        button.attr("disabled", block);
+    };
+
+    //Aktualizuje status buttonika do rejestracji
+    function UpdateRegisterButtonStatus() {
+        //Aktualizujemy status
+        CanRegisterNow = (EmailCorrect && NickCorrect && PasswordCorrect);
+
+        BlockRegisterButton(!CanRegisterNow);
+    };
+
+    //Sprawdza, czy user juz istnieje
+    function CheckAvailability() {
+        var username = $(InputFieldIDNick).val();
+
+        //Wtedy jest za krotki
+        if (username.length < 5) {
+            var ptr = $(SpanIDNickStatus);
+            ptr.css("color", "red");
+            ptr.html("Nick is too short!");
+            NickCorrect = false;
+        } else {
+
+            $.ajax({
+                type: "POST",
+                url: UrlUserExists,
+                data: '{Nick: "' + username + '" }',
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                //Poniewaz javascript!
+                success: function (response) { UserExistsResponse(response); }
+            });
+        }
+
+        UpdateRegisterButtonStatus();
+    };
+
+    //Sprawdza poprawnosc adresu email
+    function CheckEmail() {
+        var currentEmail = $(InputFieldIDEmail).val();
+        //Serio javascript!?
+        var expr = /^([\w-\.]+)@@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([\w-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$/;
+        var resultOfTest = expr.test(currentEmail);
+
+        var message = $(SpanIDEmailStatus);
+
+        EmailCorrect = resultOfTest;
+
+        //No i zwracamy wstawke
+        if (resultOfTest) {
+            message.css("color", "green");
+            message.html("E-mail OK");
+        }
+        else {
+            message.css("color", "red");
+            message.html("E-mail incorrect!");
+        }
+
+        UpdateRegisterButtonStatus();
+    };
+
+    //Odpowiedz na to co nam zwroci zapytanie o usera
+    function UserExistsResponse(response) {
+        var message = $(SpanIDNickStatus);
+
+        NickCorrect = !response;
+
+        if (!response) {
+            message.css("color", "green");
+            message.html("Nick OK");
+        }
+        else {
+            message.css("color", "red");
+            message.html("Nick taken!");
+        }
+
+        UpdateRegisterButtonStatus();
+    };
+
+    //Sprawdza wszystkie nasze pola
+    function CheckAll() {
+        CheckAvailability();
+        CheckEmail();
+        CheckPassword();
+    };
+
+    //Probuje zarejestrowac nowego usera
+    function TryRegister()
+    {
+        CheckAll();
+
+        if (!CanRegisterNow)
+        {
+            UpdateRegisterButtonStatus();
+            return;
+        }
+
+        //Pobieramy dane
+        var currentNick = $(InputFieldIDNick).val();
+        var currentEmail = $(InputFieldIDEmail).val();
+        var currentPasswd = $(InputFieldIDPassword).val();
+
+        //Przygotowujemy operacje wyslania
+        var url = "@Url.Action("TryRegister", "Home")";
+        var model = { Nick: currentNick, Email: currentEmail, Password: currentPasswd };
+
+        //Slemy w ether
+        $.post(url, model);
+         $.ajax({
+             type: "POST",
+             url: url,
+             data: model,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+             //Poniewaz javascript!
+             success: function (response)
+             {
+                 alert(response);
+             }
+         });
+
+        //Przenosimy sie na strone sukcesu.
+        window.location = UrlRegistrationSucces;
+        CheckAll();
+    };
+
+    //Do sprawdzenia hasla
+    function CheckPassword() {
+        var passwd = $(InputFieldIDPassword).val();
+        var message = $(SpanIDPasswordStatus);
+        PasswordCorrect = (passwd.length >= 10);
+
+        //Zwracamy co trza
+        if (PasswordCorrect) {
+            message.css("color", "green");
+            message.html("Password OK");
+        }
+        else {
+            message.css("color", "red");
+            message.html("Password too short!");
+        }
+
+        UpdateRegisterButtonStatus();
+    };
+
+</script>
+
+
+<h2>Sing UP</h2>
+
+@{
+    @Html.AntiForgeryToken();
+
+    @Html.ValidationSummary(true);
+    <label for="Nick">Your Nick Name:</label>
+    <p><input id="Nick" type="text" name="Nick" onkeyup="CheckAvailability()"></p>;
+    <span id="nickstatus"></span>
+    <br />
+    <label for="Email">Your E-Mail Adress:</label>
+    <p><input id="Email" type="email" name="Email" onkeyup="CheckEmail()"></p>;
+    <span id="emailstatus"></span>
+    <br />
+    <label for="Password">Your Password:</label>
+    <p><input id="Password" type="password" name="Password" onkeyup="CheckPassword()"></p>;
+    <span id="passwordstatus"></span>
+    <br />
+    <input type="submit" id="registerbutton" value="Register" onclick="TryRegister()" />
+    <br />
+}

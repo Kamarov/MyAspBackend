@@ -1,0 +1,140 @@
+﻿@model MyASPBackend.Models.LoginData
+
+@{
+    ViewBag.Title = "SignIn";
+}
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
+
+<h2>Sign In</h2>
+@{
+    <label for="Nick">Your Nick Name:</label>
+    <p><input id="Nick" type="text" name="Nick"></p>;
+    <span id="nickstatus"></span>
+    <br />
+    <label for="Password">Your Password:</label>
+    <p><input id="Password" type="password" name="Password"></p>;
+    <span id="passwordstatus"></span>
+    <br />
+    <input type="submit" id="logonButton" value="SignIn" onclick="TryLogOn()" />
+    <br />
+}
+
+
+<script type="text/javascript">
+    //Ogolnie skrypty w tym miejscu, bo najpierw strona musi sie zaladowac...
+    //Usuwamy dane o poprzednim logowaniu
+    localStorage.removeItem("Nick");
+
+    //Buttoniki
+    const ButtonLogon = $("#logonButton");
+
+    //Spany
+    const SpanNickStatus = $("#nickstatus");
+    const SpanPasswordStatus = $("#passwordstatus");
+
+    //InputFieldy
+    const InputFieldNick = $("#Nick");
+    const InputFieldPassword = $("#Password");
+
+    //Czy user jest aktualnie zalogowany.
+    var UserLogged = false;
+    //Moje unikalne ID
+    var UserID = -1;
+
+    //Url
+    const UrlUserExists = "/Home/UserExists";
+
+    //Nasze informacje
+    var NickCorrect = false;
+    var PasswordOK = false;
+    var CanBeLogged = false;
+
+    //Proba zalogowania sie
+    function TryLogOn() {
+        CheckNick();
+        CheckPassword();
+
+        CanBeLogged = (NickCorrect && PasswordOK);
+
+        //Nie zalogujemy sie wtedy.
+        if (!CanBeLogged)
+            return;
+    };
+
+    //Sprawdza Nicka
+    function CheckNick() {
+        var currentNick = InputFieldNick.val();
+
+        if (currentNick.length < 5)
+            NickCorrect = false;
+        else {
+            $.ajax({
+                type: "POST",
+                url: UrlUserExists,
+                async: false,
+                data: '{Nick: "' + currentNick + '" }',
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                //Jak user istnieje, zmienimy bool'a
+                success: function (response) { NickCorrect = response; }
+            });
+        }
+
+        //Zwracamy wizualne dane
+        if (NickCorrect)
+            SpanNickStatus.html("");
+        else {
+            SpanNickStatus.css("color", "red");
+            SpanNickStatus.html("Nick Incorrect!");
+        }
+    };
+
+    //Sprawdza haslo
+    function CheckPassword() {
+        var currentPsswd = InputFieldPassword.val();
+
+
+        PasswordOK = false;
+        if (!NickCorrect)
+            PasswordOK = false;
+        //Na pewno jest za krotkie
+        else if (currentPsswd.length < 10)
+            PasswordOK = false;
+        else {
+
+            //Bierzemy se aktualnego Nick'a
+            var currentNick = InputFieldNick.val();
+
+            //Tworzymy model do wyslania pod wskazany Url
+            var model = { Nick: currentNick, Password: currentPsswd };
+            var url = "@Url.Action("TryLogIn", "Home")";
+
+            //Slemy w ether
+            $.ajax({
+                    type: "POST", url: url, data: model,
+                success: function (data)
+                {
+                    PasswordOK = (data.OperationResult.valueOf() == "UserLogged".valueOf() || data.OperationResult.valueOf() == "UserAlreadyLogon".valueOf());
+                },
+                dataType: "JSON", async: false
+            });
+        }
+
+        //No to zwracamy informacje wizualna
+        if (PasswordOK)
+        {
+            var currentNick = InputFieldNick.val();
+            localStorage.setItem("Nick", currentNick);
+            var url = "/Home/UserPage?Nick=" + localStorage.Nick;
+            window.location = url;
+        }
+        else {
+            SpanPasswordStatus.css("color", "red");
+            SpanPasswordStatus.html("Password incorrect!");
+            localStorage.removeItem("Nick");
+        }
+    };
+
+</script>

@@ -1,0 +1,67 @@
+﻿@model MyASPBackend.Models.UserSession
+
+@{
+    ViewBag.Title = "UserPage";
+}
+
+<script>
+    var nickvalue = localStorage.getItem("Nick");
+    if (nickvalue == undefined)
+        window.location = "/Home/SignIn";
+
+</script>
+
+@{
+
+    //Sprawdzamy, czy mamy info o userze
+    if (ViewBag.RequestedUser == null)
+    {
+        <script>
+            var nickvalue = localStorage.getItem("Nick");
+            //No to oznacza, ze sie nie logowalismy - redirect do logowania
+            if (nickvalue == undefined || nickvalue.length <= 0 || window.location.search.length > 0)
+                window.location = "/Home/SignIn";
+            //No to redirect do aktualnego usera
+            else
+                window.location = "/Home/UserPage?Nick=" + nickvalue;
+        </script>
+    }
+    //Normalny render
+    else
+    {
+        <h1>UserPage</h1>
+        <p>User Name: @ViewBag.RequestedUser.Nick</p>
+        <p id="logoutTime">Time to logout: @ViewBag.RequestedUser.LogoutTime</p>
+        <p><input type="button" value="Log Out" onclick="LogOutNow()" /></p>
+    }
+
+}
+
+<script>
+
+    //Natychmiast wylogowuje
+    function LogOutNow()
+    {
+        var url = "/Home/TryLogOut";
+        var model = { Nick: localStorage.getItem("Nick") };
+
+        $.ajax({
+            type: "POST", url: url, data: model,
+            success: function (result)
+            {
+                if (result.OperationResult.valueOf() == "UserLoggedOut".valueOf() || result.OperationResult.valueOf() == "UserAlreadyLoggedOut".valueOf()) {
+                    alert("Logged out!");
+                    localStorage.removeItem("Nick");
+                    window.location = "/Home";
+                }
+                else
+                {
+                    alert(result.OperationResult);
+                }
+            }
+            ,async: false
+        });
+
+    }
+
+</script>

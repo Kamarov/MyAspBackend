@@ -1,0 +1,18 @@
+﻿@model MyASPBackend.Models.Registration
+
+@{
+    ViewBag.Title = "RegistrationFailed";
+}
+
+<h2>Registration Failed!</h2>
+
+@{
+    <h3>
+        User: @ViewBag.FailedRegistration.Nick
+        already exists!
+    </h3>
+
+
+    @Html.ActionLink("Try other name", "RegistrationPage", "Home");
+}
+

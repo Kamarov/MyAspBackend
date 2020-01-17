@@ -1,0 +1,31 @@
+﻿@model MyASPBackend.Models.User
+
+@{
+    ViewBag.Title = "RegistrationSucces";
+}
+
+<script type="text/javascript">
+    function ReturnToHome() {
+        window.location = "/Home";
+    };
+</script>
+
+
+
+@{
+
+    //No to wracamy na home'a
+    if (ViewBag.NewUserNick == null)
+    {
+        <script>ReturnToHome();</script>
+    }
+
+    <h2>Registration Succes!</h2>
+
+    <h3>
+        Welcome to our site, @ViewBag.NewUserNick
+        !
+    </h3>
+    @Html.ActionLink("Back to home", "Index", "Home");
+}
+
